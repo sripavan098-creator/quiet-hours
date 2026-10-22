@@ -66,6 +66,18 @@ Severity scale: **Critical** blocks the build · **High** costs hours · **Mediu
 - **Suggestion:** Offer a motion-and-events-only scope, since many products need events without video.
 - **Status:** Open. Will be stated in the privacy section of the submission.
 
+## F-006: Sample app and notifications docs disagree on webhook authentication
+
+- **Date:** 2026-10-22
+- **Task:** Confirm how a Ring webhook is authenticated, using the official sample app and the notifications documentation.
+- **Steps:** Read the README of `AmazonAppDev/ring-api-helloworld`, then the notifications page of the API documentation.
+- **Expected:** The sample app and the reference describe the same scheme.
+- **Actual:** The notifications page describes `X-Signature` (HMAC-SHA256 with a `sha256=` prefix). The sample app describes `RING_WEBHOOK_SECRET` as a "Bearer token for webhook auth" and does not name the header. Its README also doesn't describe a signature scheme, the token exchange request, or a public HTTPS setup.
+- **Severity:** High (a wrong guess would make every real webhook fail with 401)
+- **Workaround:** Followed the notifications page. Will check against a real delivery in the Playground.
+- **Suggestion:** Make the sample app verify the signature the same way the reference documents it, and show the full verification code.
+- **Status:** Open. Unverified until a real webhook arrives.
+
 ---
 
 ## Template for new entries
