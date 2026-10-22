@@ -82,6 +82,8 @@ class AdapterShape(unittest.TestCase):
 class WebhookEndToEnd(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.saved_dev = server.DEV_MODE
+        server.DEV_MODE = True  # the demo endpoint exists only in development
         cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         cls.port = cls.httpd.server_address[1]
         threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
@@ -92,6 +94,7 @@ class WebhookEndToEnd(unittest.TestCase):
     def tearDownClass(cls):
         cls.httpd.shutdown()
         server.ZONE_MAP.pop("ava1.ring.device.kitchen-cam", None)
+        server.DEV_MODE = cls.saved_dev
 
     def post(self, path, body: bytes, headers=None):
         req = urllib.request.Request(f"http://127.0.0.1:{self.port}{path}", data=body, method="POST")

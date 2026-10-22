@@ -17,7 +17,7 @@
     --watch: #9fb8ff;
     --alarm: #ff6b6b;
     --text: #d8e7f2;
-    --muted: #6a8197;
+    --muted: #7d94a8;
     --pad: clamp(16px, 3vw, 36px);
   }
   * { box-sizing: border-box; }
@@ -25,16 +25,22 @@
   body {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 14px;
+    line-height: 1.5;
     overflow-x: hidden;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   h1, h2, .head { font-family: "Space Grotesk", system-ui, sans-serif; }
+  [hidden] { display: none !important; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
 
   .shell {
     min-height: 100%;
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
-    gap: 0;
   }
   @media (max-width: 860px) { .shell { grid-template-columns: 1fr; } }
 
@@ -57,20 +63,29 @@
     display: flex; flex-direction: column; gap: 22px; min-width: 0;
   }
   .kicker { color: var(--muted); letter-spacing: .18em; text-transform: uppercase; font-size: 11px; }
-  .title { font-size: 30px; font-weight: 700; margin: 6px 0 0; letter-spacing: -.01em; }
+  .title { font-size: 30px; font-weight: 700; margin: 6px 0 0; letter-spacing: -.01em; line-height: 1.15; }
   .verdict { font-size: 17px; line-height: 1.45; margin: 0; }
   .verdict.ok { color: var(--lit); }
   .verdict.watch { color: var(--watch); }
   .verdict.alert { color: var(--alarm); }
 
+  .tabs { display: flex; gap: 0; border: 1px solid var(--line); }
+  .tabs button { flex: 1; border: 0; min-height: 44px; color: var(--muted); }
+  .tabs button[aria-pressed="true"] { color: var(--beam); background: rgba(159,230,255,.07); }
+
   .facts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
-  .facts div { background: var(--ink-2); padding: 12px; }
+  .facts div { background: var(--ink-2); padding: 12px; min-width: 0; }
   .facts span { display: block; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
   .facts strong { display: block; margin-top: 6px; font-family: "Space Grotesk", sans-serif; font-size: 18px; font-weight: 600; }
 
   .alerts { display: flex; flex-direction: column; gap: 10px; }
   .alert-item { border: 1px solid rgba(255,107,107,.45); background: rgba(255,107,107,.07); padding: 12px 14px; line-height: 1.5; }
   .alert-item .who { color: var(--alarm); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+
+  details.rules { border: 1px solid var(--line); padding: 10px 14px; }
+  details.rules summary { cursor: pointer; color: var(--beam); min-height: 32px; display: flex; align-items: center; }
+  details.rules ul { margin: 10px 0 4px; padding-left: 18px; color: #b8cde0; }
+  details.rules li { margin-bottom: 8px; }
 
   .feed { flex: 1; min-height: 0; overflow: auto; border-top: 1px solid var(--line); padding-top: 12px; }
   .feed ol { list-style: none; margin: 0; padding: 0; }
@@ -79,54 +94,144 @@
   .feed .room { color: var(--text); }
 
   .controls { display: flex; flex-wrap: wrap; gap: 10px; }
-  button {
-    font: inherit; color: var(--text); background: transparent; cursor: pointer;
+  button, select, input[type="text"] {
+    font: inherit; color: var(--text); background: transparent;
     border: 1px solid var(--line); padding: 10px 14px; min-height: 44px;
   }
-  button:hover, button:focus-visible { border-color: var(--beam); outline: none; }
+  button { cursor: pointer; }
+  button:hover, button:focus-visible, select:focus-visible, input:focus-visible {
+    border-color: var(--beam); outline: 2px solid var(--beam); outline-offset: 2px;
+  }
   button.primary { border-color: rgba(159,230,255,.55); color: var(--beam); }
   button.danger { border-color: rgba(255,107,107,.55); color: var(--alarm); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  select, input[type="text"] { background: var(--ink); width: 100%; }
+  option { background: var(--ink); color: var(--text); }
+
+  /* ---------- setup ---------- */
+  .setup { display: flex; flex-direction: column; gap: 18px; }
+  .notice { border: 1px solid var(--line); padding: 14px; color: #b8cde0; }
+  .notice h2 { font-size: 16px; margin: 0 0 8px; color: var(--text); }
+  .notice p { margin: 0 0 8px; }
+  .consent { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; }
+  .consent input { width: 22px; height: 22px; margin-top: 2px; flex: none; accent-color: #9fe6ff; }
+  fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+  fieldset:disabled { opacity: .55; }
+  .device { border: 1px solid var(--line); padding: 12px; display: grid; gap: 8px; min-width: 0; }
+  .device strong { font-family: "Space Grotesk", sans-serif; font-size: 16px; }
+  .device code { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  label { color: var(--muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  .add { display: grid; gap: 8px; }
+  .status-line { min-height: 1.5em; color: var(--lit); }
+  .status-line.error { color: var(--alarm); }
 
   .fine { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 0; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  /* ---------- phones ---------- */
+  @media (max-width: 420px) {
+    .title { font-size: 24px; }
+    .caption { display: none; }
+    .facts { grid-template-columns: 1fr; }
+    .stage { min-height: 50vh; }
+    .controls button { flex: 1 1 100%; }
+    .tabs button { font-size: 13px; }
+  }
 </style>
 </head>
 <body>
 <main class="shell">
   <section class="stage" aria-label="Floor plan of the home, lit by a sweeping beam">
-    <canvas id="scene" role="img" aria-label="Rooms light up as the beam passes over them. Quiet rooms dim; a room needing attention pulses coral."></canvas>
+    <canvas id="scene" role="img" aria-labelledby="scene-summary"></canvas>
+    <p id="scene-summary" class="sr-only">Waiting for the first signal.</p>
     <div class="caption">
       <b>The beam</b> sweeps the house once every 18 seconds. A room glows when it has moved recently.
       A room turns coral only when its rhythm breaks.
     </div>
   </section>
 
-  <aside class="log" aria-live="polite">
-    <div>
-      <div class="kicker">Keeper's log · <span id="clock">--:--</span></div>
-      <h1 class="title" id="headline">Watching the house</h1>
-      <p class="verdict ok" id="verdict">Waiting for the first signal.</p>
+  <aside class="log">
+    <nav class="tabs" aria-label="Views">
+      <button type="button" id="tab-house" aria-pressed="true">House</button>
+      <button type="button" id="tab-setup" aria-pressed="false">Setup</button>
+    </nav>
+
+    <!-- ===== House view ===== -->
+    <div id="view-house" class="house" aria-live="polite">
+      <div>
+        <div class="kicker">Keeper's log · <span id="clock">--:--</span></div>
+        <h1 class="title" id="headline">Watching the house</h1>
+        <p class="verdict ok" id="verdict">Waiting for the first signal.</p>
+      </div>
+
+      <form id="signin" class="notice" hidden>
+        <label for="signin-token">Caregiver access code</label>
+        <input type="password" id="signin-token" class="code" autocomplete="current-password" minlength="16" required>
+        <button type="submit" class="primary">Unlock</button>
+        <p class="fine">Kept in this page only. Refresh the page to lock it again.</p>
+      </form>
+
+      <div class="facts" aria-label="Key facts">
+        <div><span>Last movement</span><strong id="f-last">—</strong></div>
+        <div><span>Quiet for</span><strong id="f-quiet">—</strong></div>
+        <div><span>Usual gap</span><strong id="f-usual">—</strong></div>
+      </div>
+
+      <div class="alerts" id="alerts"></div>
+
+      <details class="rules">
+        <summary>How this was decided</summary>
+        <ul id="rules-body"></ul>
+      </details>
+
+      <div class="controls">
+        <button class="primary" id="btn-normal" type="button">Ordinary day</button>
+        <button class="danger" id="btn-collapse" type="button">Simulate a collapse</button>
+      </div>
+
+      <div class="feed">
+        <div class="kicker" style="margin-bottom:8px">Recent signals</div>
+        <ol id="feed"></ol>
+      </div>
+
+      <p class="fine">Simulated, Ring-shaped events for a demonstration home. Quiet Hours watches rhythm, not video, and does not replace emergency services. If someone may be in danger, call local emergency services now.</p>
     </div>
 
-    <div class="facts" aria-label="Key facts">
-      <div><span>Last movement</span><strong id="f-last">—</strong></div>
-      <div><span>Quiet for</span><strong id="f-quiet">—</strong></div>
-      <div><span>Usual gap</span><strong id="f-usual">—</strong></div>
+    <!-- ===== Setup view ===== -->
+    <div id="view-setup" class="setup" hidden>
+      <div>
+        <div class="kicker">Setup</div>
+        <h1 class="title">Link the home</h1>
+      </div>
+
+      <section class="notice" aria-labelledby="notice-title">
+        <h2 id="notice-title">Before you link devices</h2>
+        <p>The person who will be watched must know about this and agree to it.</p>
+        <p>Quiet Hours sees when movement happens in each room and when the front door opens. It does not see video, hear sound, or keep images.</p>
+        <p>Monitoring stops when the devices are removed here.</p>
+        <label class="consent">
+          <input type="checkbox" id="consent">
+          <span>The person being watched knows about this and agrees.</span>
+        </label>
+        <p class="fine">This confirmation is not saved yet. It applies to this browser session only.</p>
+      </section>
+
+      <fieldset id="setup-fields" disabled>
+        <div id="setup-note" class="fine" hidden></div>
+        <div id="device-list"></div>
+
+        <section class="add" aria-labelledby="add-title">
+          <h2 id="add-title" style="font-size:16px;margin:0">Add a device</h2>
+          <label for="new-device-id">Ring device ID</label>
+          <input type="text" id="new-device-id" autocomplete="off" spellcheck="false" maxlength="120" placeholder="ava1.ring.device.…">
+          <label for="new-device-room">Room</label>
+          <select id="new-device-room"></select>
+          <button type="button" id="btn-add">Add device</button>
+        </section>
+
+        <p id="setup-status" class="status-line" role="status" aria-live="polite"></p>
+      </fieldset>
     </div>
-
-    <div class="alerts" id="alerts"></div>
-
-    <div class="controls">
-      <button class="primary" id="btn-normal">Ordinary day</button>
-      <button class="danger" id="btn-collapse">Simulate a collapse</button>
-    </div>
-
-    <div class="feed">
-      <div class="kicker" style="margin-bottom:8px">Recent signals</div>
-      <ol id="feed"></ol>
-    </div>
-
-    <p class="fine">Simulated, Ring-shaped events for a demonstration home. Quiet Hours watches rhythm, not video, and does not replace emergency services. If someone may be in danger, call local emergency services now.</p>
   </aside>
 </main>
 
@@ -140,8 +245,11 @@
     { id: "medicine",   label: "Medicine box", r: [0.06, 0.54, 0.20, 0.18] },
     { id: "front_door", label: "Front door",   r: [0.30, 0.76, 0.20, 0.16] },
   ];
+  const LABEL = Object.fromEntries(ROOMS.map(r => [r.id, r.label]));
   const LIGHTHOUSE = { x: 0.0, y: 0.0 };
+  const DEVICE_ID_RE = /^[A-Za-z0-9._-]{1,120}$/;
 
+  // ---------- scene ----------
   const canvas = document.getElementById("scene");
   const ctx = canvas.getContext("2d");
   let W = 0, H = 0, dpr = 1;
@@ -168,11 +276,15 @@
   }
 
   function angleTo(cx, cy) { return Math.atan2(cy - LIGHTHOUSE.y * H, cx - LIGHTHOUSE.x * W); }
+  function normalise(a) {
+    while (a > Math.PI) a -= 2 * Math.PI;
+    while (a < -Math.PI) a += 2 * Math.PI;
+    return a;
+  }
 
   function draw(t) {
     ctx.clearRect(0, 0, W, H);
 
-    // faint grid, like a survey plan
     ctx.strokeStyle = "rgba(143,196,230,0.05)";
     ctx.lineWidth = 1;
     for (let gx = 0; gx < W; gx += 36) { ctx.beginPath(); ctx.moveTo(gx + .5, 0); ctx.lineTo(gx + .5, H); ctx.stroke(); }
@@ -182,7 +294,6 @@
     const reach = Math.hypot(W, H);
     const spread = 0.34;
 
-    // the beam
     const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, reach);
     grad.addColorStop(0, "rgba(159,230,255,0.22)");
     grad.addColorStop(1, "rgba(159,230,255,0)");
@@ -193,7 +304,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // rooms
     for (const room of ROOMS) {
       const b = roomBox(room.r);
       const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
@@ -225,15 +335,8 @@
       ctx.fillText(room.label.toUpperCase(), b.x + 10, b.y + 20);
     }
 
-    // lighthouse lamp
     ctx.fillStyle = "#cfefff";
     ctx.beginPath(); ctx.arc(lx + 8, ly + 8, 4, 0, Math.PI * 2); ctx.fill();
-  }
-
-  function normalise(a) {
-    while (a > Math.PI) a -= 2 * Math.PI;
-    while (a < -Math.PI) a += 2 * Math.PI;
-    return a;
   }
 
   function frame(now) {
@@ -243,7 +346,7 @@
     requestAnimationFrame(frame);
   }
 
-  // ---------- data ----------
+  // ---------- helpers ----------
   const $ = (id) => document.getElementById(id);
   const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : "—";
   const fmtMins = (m) => {
@@ -251,7 +354,31 @@
     const h = Math.floor(m / 60), mm = m % 60;
     return h ? `${h}h ${String(mm).padStart(2, "0")}m` : `${mm}m`;
   };
+  const STATE_WORD = { ok: "steady", watch: "slowing", alert: "needs a check", pending: "waiting", resting: "resting" };
 
+  // ---------- caregiver access (kept in memory only) ----------
+  let token = "";
+  async function api(path, opts = {}) {
+    const headers = Object.assign({}, opts.headers || {});
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(path, Object.assign({ cache: "no-store" }, opts, { headers }));
+    if (res.status === 401) {
+      $("signin").hidden = false;
+      $("verdict").className = "verdict watch";
+      $("verdict").textContent = "Enter the caregiver access code to see the house.";
+      throw new Error("sign-in required");
+    }
+    return res;
+  }
+  $("signin").addEventListener("submit", (e) => {
+    e.preventDefault();
+    token = $("signin-token").value.trim();
+    $("signin-token").value = "";
+    $("signin").hidden = true;
+    poll();
+  });
+
+  // ---------- house view ----------
   function renderStatus(s) {
     zoneState = Object.fromEntries(s.zones.map(z => [z.id, z.state]));
     $("clock").textContent = fmtTime(s.now);
@@ -278,7 +405,7 @@
     $("f-usual").textContent = s.home.baseline_gap_minutes != null ? fmtMins(s.home.baseline_gap_minutes) + " gap" : "learning";
 
     const box = $("alerts");
-    box.innerHTML = "";
+    box.replaceChildren();
     for (const a of s.alerts) {
       const el = document.createElement("div");
       el.className = "alert-item";
@@ -290,21 +417,48 @@
       el.append(who, msg);
       box.append(el);
     }
+
+    renderRules(s);
+    $("scene-summary").textContent =
+      `Home ${STATE_WORD[s.state] || s.state}. ` +
+      s.zones.map(z => `${z.name} ${STATE_WORD[z.state] || z.state}`).join(". ") + ".";
+  }
+
+  function renderRules(s) {
+    const list = $("rules-body");
+    list.replaceChildren();
+    const items = [];
+    const threshold = fmtMins(s.home.threshold_minutes);
+    if (!s.is_daytime) {
+      items.push("Rules only run from 07:00 to 22:00, home time. Outside those hours nothing is judged.");
+    } else {
+      items.push(`Home silence: the longest allowed time with no movement is ${threshold}. It is the longer of 3 hours or three times this home's usual gap between movements.`);
+      items.push(s.home.baseline_gap_minutes != null
+        ? `Usual gap: ${fmtMins(s.home.baseline_gap_minutes)}, from the last 7 days.`
+        : "Usual gap: still learning. Until five gaps are seen, the 3-hour minimum applies.");
+      items.push(`Routine checks: the front door (before 12:00) and the medicine box (before 10:00) only alert when this home had the usual event on at least 4 of the last 7 days.`);
+    }
+    items.push(`Days of history used: ${s.observed_days}.`);
+    for (const text of items) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      list.append(li);
+    }
   }
 
   async function renderEvents() {
-    const res = await fetch("/api/events?limit=14", { cache: "no-store" });
+    const res = await api("/api/events?limit=14");
     const { events } = await res.json();
-    const names = Object.fromEntries(ROOMS.map(r => [r.id, r.label]));
     const ol = $("feed");
-    ol.innerHTML = "";
+    ol.replaceChildren();
     for (const e of events) {
       const li = document.createElement("li");
       const t = document.createElement("time");
       t.textContent = fmtTime(e.created_at);
       const r = document.createElement("span");
       r.className = "room";
-      r.textContent = `${names[e.device_id] || e.device_name} · ${e.kind.replace("_", " ")}`;
+      const room = LABEL[e.device_id] || e.device_name || "Unassigned device";
+      r.textContent = `${room} · ${e.kind.replace("_", " ")}`;
       li.append(t, r);
       ol.append(li);
     }
@@ -312,16 +466,17 @@
 
   async function poll() {
     try {
-      const res = await fetch("/api/status", { cache: "no-store" });
+      const res = await api("/api/status");
       renderStatus(await res.json());
       await renderEvents();
     } catch (err) {
+      if (!$("signin").hidden) return;
       $("verdict").textContent = "Cannot reach the house right now. Retrying.";
     }
   }
 
   async function load(scenario) {
-    const res = await fetch("/api/sim/demo", {
+    const res = await api("/api/sim/demo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scenario }),
@@ -332,6 +487,131 @@
 
   $("btn-normal").addEventListener("click", () => load("normal"));
   $("btn-collapse").addEventListener("click", () => load("collapse"));
+
+  // ---------- setup view ----------
+  let rooms = [];
+  let devicesAvailable = true;
+
+  function roomSelect(value, labelText, includeUnused = true) {
+    const sel = document.createElement("select");
+    sel.setAttribute("aria-label", labelText);
+    if (includeUnused) {
+      const none = document.createElement("option");
+      none.value = "";
+      none.textContent = "Not in use";
+      sel.append(none);
+    }
+    for (const r of rooms) {
+      const o = document.createElement("option");
+      o.value = r;
+      o.textContent = LABEL[r] || r;
+      sel.append(o);
+    }
+    sel.value = value || "";
+    return sel;
+  }
+
+  function setStatus(text, isError = false) {
+    const el = $("setup-status");
+    el.textContent = text;
+    el.classList.toggle("error", isError);
+  }
+
+  async function saveRoom(ringId, room) {
+    const res = await api(`/api/devices/${encodeURIComponent(ringId)}/room`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `Could not save (${res.status})`);
+    return body;
+  }
+
+  async function loadDevices() {
+    const res = await api("/api/devices");
+    if (res.status === 404) {
+      devicesAvailable = false;
+      $("setup-note").hidden = false;
+      $("setup-note").textContent = "Device setup is available only in development mode for now. Live linking arrives with the Ring sign-in step.";
+      $("setup-fields").disabled = true;
+      $("consent").disabled = true;
+      return;
+    }
+    const data = await res.json();
+    rooms = data.rooms;
+    const newSel = roomSelect("kitchen", "Room for new device", false);
+    newSel.id = "new-device-room";
+    $("new-device-room").replaceWith(newSel);
+
+    const list = $("device-list");
+    list.replaceChildren();
+    for (const d of data.devices) {
+      const card = document.createElement("div");
+      card.className = "device";
+      const name = document.createElement("strong");
+      name.textContent = d.name;
+      const id = document.createElement("code");
+      id.textContent = d.id;
+      const lab = document.createElement("label");
+      lab.textContent = "Room";
+      const sel = roomSelect(d.room, `Room for ${d.name}`);
+      sel.addEventListener("change", async () => {
+        try {
+          await saveRoom(d.id, sel.value);
+          setStatus(sel.value ? `${d.name} is now in ${LABEL[sel.value]}.` : `${d.name} is no longer in use.`);
+          await poll();
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+      card.append(name, id, lab, sel);
+      list.append(card);
+    }
+    if (!data.devices.length) {
+      const p = document.createElement("p");
+      p.className = "fine";
+      p.textContent = "No devices linked yet. Add one below.";
+      list.append(p);
+    }
+  }
+
+  $("consent").addEventListener("change", (e) => {
+    if (!devicesAvailable) return;
+    $("setup-fields").disabled = !e.target.checked;
+  });
+
+  $("btn-add").addEventListener("click", async () => {
+    const ringId = $("new-device-id").value.trim();
+    if (!DEVICE_ID_RE.test(ringId)) {
+      setStatus("Enter a Ring device ID: letters, numbers, dots, dashes and underscores, up to 120 characters.", true);
+      return;
+    }
+    try {
+      await saveRoom(ringId, $("new-device-room").value);
+      $("new-device-id").value = "";
+      setStatus("Device added.");
+      await loadDevices();
+      await poll();
+    } catch (err) {
+      setStatus(err.message, true);
+    }
+  });
+
+  // ---------- tabs ----------
+  function showView(name) {
+    const house = name === "house";
+    $("view-house").hidden = !house;
+    $("view-setup").hidden = house;
+    $("tab-house").setAttribute("aria-pressed", String(house));
+    $("tab-setup").setAttribute("aria-pressed", String(!house));
+    if (!house) {
+      loadDevices().catch(() => setStatus("Could not load devices.", true));
+      $("consent").focus();
+    }
+  }
+  $("tab-house").addEventListener("click", () => showView("house"));
+  $("tab-setup").addEventListener("click", () => showView("setup"));
 
   resize();
   requestAnimationFrame(frame);

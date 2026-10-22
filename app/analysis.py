@@ -17,8 +17,18 @@ stillness is never treated as an emergency.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from statistics import median
+
+# All rules judge the home's local time. Events arrive with their own offsets,
+# so every timestamp is converted to IST before any hour or date is read.
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def to_home_time(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        raise ValueError("timestamps must be timezone-aware")
+    return dt.astimezone(IST)
 
 # zone_id, display name, is_interior (counts toward home silence)
 ZONES = [
@@ -80,8 +90,10 @@ def assess(
     `events` is an iterable of (zone_id, created_at). Events after `now` are
     ignored so the same history can be replayed at any moment.
     """
+    now = to_home_time(now)
     by_zone: dict[str, list[datetime]] = {z: [] for z, _, _ in ZONES}
     for zone, ts in events:
+        ts = to_home_time(ts)
         if zone in by_zone and ts <= now:
             by_zone[zone].append(ts)
     for times in by_zone.values():
