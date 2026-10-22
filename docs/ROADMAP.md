@@ -92,7 +92,7 @@ All five items are built and tested: SQLite store with 14-day retention (5.1), J
 | 6.3 | Text description | Covers what it does, how it works, what is simulated and what is live |
 | 6.4 | Product feedback on Ring | Covers onboarding, docs, simulator/Playground, feature requests |
 | 6.5 | Track and mini-challenge entries | Ring track; Open Source only if chosen |
-| 6.6 | Final check: tests pass, README quick start works on a clean machine | Verified by running it fresh |
+| 6.6 | Final check: tests pass, README quick start works on a clean machine | **Done.** Fresh clone of the public repo: 66 tests pass, and the dev server starts and answers `/healthz` and `/readyz` |
 
 ## Cut order if time runs short
 
