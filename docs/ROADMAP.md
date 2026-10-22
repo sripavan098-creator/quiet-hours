@@ -39,11 +39,11 @@ Exit check: all five items closed, tests added for each, and `SECURITY.md` updat
 | # | Item | Done when |
 |---|---|---|
 | 2.1 | Obtain Ring developer access (portal app, Playground or staging user) | Credentials stored outside the repo |
-| 2.2 | OAuth account linking end to end | Token obtained and refreshed against `oauth.ring.com` |
-| 2.3 | List devices with `GET /v1/devices` | Device IDs recorded and mapped to rooms |
-| 2.4 | Receive one real motion webhook | Signature verified; event shows on the page |
-| 2.5 | Confirm webhook timestamp field | `meta.time` format confirmed against a real payload |
-| 2.6 | Confirm event-history query options | `device_events()` tested with real query parameters |
+| 2.2 | OAuth account linking end to end | **Not done.** Linking routes not built; token refresh not run against Ring. Playground token shows the API works |
+| 2.3 | List devices with `GET /v1/devices` | **Done.** Playground device listed (DoorbellPro, motion capable, online). Room mapping still to do |
+| 2.4 | Receive one real motion webhook | **Not done.** No physical Ring device on the account. Signature verification is covered by tests; a live delivery is still needed |
+| 2.5 | Confirm webhook timestamp field | **Done.** `meta.time` and `reported_at` are UTC with a `Z` suffix, confirmed from Playground API responses. Re-check on the first real webhook (2.4) |
+| 2.6 | Confirm event-history query options | **Partly done.** Path confirmed live: `GET /v1/history/devices/{id}/events` returns events with no query parameters. Filters and pagination still untested. Response uses epoch-millisecond timestamps and `on_demand` event types, not motion |
 
 Exit check: one real event flows from a Ring device to the page, with the signature verified.
 
