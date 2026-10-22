@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 import analysis  # noqa: E402
 import server  # noqa: E402
+from store import EventStore  # noqa: E402
 
 
 def _payload(event_id, device):
@@ -37,14 +38,16 @@ class DeviceEndpoints(unittest.TestCase):
 
     def setUp(self):
         self.saved_map = dict(server.ZONE_MAP)
-        self.saved_events = dict(server._events)
+        self.saved_store = server.STORE
+        server.STORE = EventStore(":memory:")  # each test starts with an empty store
 
     def tearDown(self):
         server.ZONE_MAP.clear()
         server.ZONE_MAP.update(self.saved_map)
-        with server._lock:
-            server._events.clear()
-            server._events.update(self.saved_events)
+        server.STORE = self.saved_store
+
+    def stored(self, event_id):
+        return next(ev for ev in server.STORE.all() if ev["event_id"] == event_id)
 
     def call(self, method, path, body=None):
         data = None if body is None else json.dumps(body).encode()
@@ -93,16 +96,14 @@ class DeviceEndpoints(unittest.TestCase):
         server.ZONE_MAP["ava1.ring.device.remap"] = "kitchen"
         self.assertEqual(server.handle_webhook(raw, server.sign(raw))[0], 200)
         self.call("PUT", "/api/devices/ava1.ring.device.remap/room", {"room": "bedroom"})
-        with server._lock:
-            self.assertEqual(server._events["evt_r1"]["device_id"], "bedroom")
+        self.assertEqual(self.stored("evt_r1")["device_id"], "bedroom")
 
     def test_unmap_blanks_stored_events_so_rules_ignore_them(self):
         raw = json.dumps(_payload("evt_u1", "ava1.ring.device.unmap")).encode()
         server.ZONE_MAP["ava1.ring.device.unmap"] = "kitchen"
         server.handle_webhook(raw, server.sign(raw))
         self.call("PUT", "/api/devices/ava1.ring.device.unmap/room", {"room": ""})
-        with server._lock:
-            self.assertEqual(server._events["evt_u1"]["device_id"], "")
+        self.assertEqual(self.stored("evt_u1")["device_id"], "")
         self.assertNotIn("ava1.ring.device.unmap", server.ZONE_MAP)
 
 

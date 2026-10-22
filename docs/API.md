@@ -182,3 +182,11 @@ curl -s -X POST http://localhost:8080/api/ring/webhook \
 ```
 
 Note: the signature must be computed over the exact bytes sent. Use `printf '%s'` rather than `echo` to avoid adding a newline.
+
+
+## Gate 5 additions
+
+- `GET /readyz` (open): `200` with `{"ready": true, "checks": {"config": "ok", "store": "ok"}}`, or `503` when a required setting is missing or the store cannot answer. It reports status words only, never values.
+- `GET /api/status` now includes `feed`: `{"last_event_at": ISO time or null, "gap_warning": bool}`. `gap_warning` is true when no event has arrived for 12 hours during the day, or when no event has ever arrived. It says the data may be incomplete. It is not an alert, and it does not mean the home is quiet.
+- Rate limits, per client (the first `X-Forwarded-For` address behind a proxy, otherwise the connection address): 300 webhook requests and 120 status or event reads per minute. Over the limit returns `429` with `{"error": "too many requests, slow down"}`.
+- `GET /api/events?limit=n`: a non-numeric `limit` returns `400`.

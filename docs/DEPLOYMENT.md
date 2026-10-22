@@ -142,3 +142,9 @@ For the demo, record the local run; no hosting is needed. If Ring's review requi
 - [ ] TLS certificate valid; Ring can reach the webhook
 - [ ] Consent recorded for the monitored person (see SECURITY.md §6)
 - [ ] Monitoring check configured
+
+
+## Storage and readiness (Gate 5)
+
+- Set `QH_DB_PATH` to a file on persistent storage. Without a persistent disk, the database is lost when the service redeploys or restarts, and the caregiver must wait for new webhook events before the status is complete. Check Render's current disk options before relying on it.
+- `GET /readyz` should return `200` after deploy. Point an uptime check at it.

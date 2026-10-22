@@ -108,3 +108,13 @@ Deletion must be possible without touching other households. v1.0 is one househo
 
 - In-memory storage means a restart erases the history the rules depend on. After a restart the routine checks cannot run until four days of events have arrived again. The status page should say so (add to Gate 4.2).
 - `created_at` offsets are inconsistent until Gate 1.4 normalises them.
+
+
+## Storage (Gate 5)
+
+Events are stored in SQLite (Python standard library, no new dependency), in the file named by `QH_DB_PATH` (default `data/quiet_hours.db`).
+
+- One row per event, keyed by `event_id`. A repeated webhook is ignored.
+- Retention: events older than 14 days before the newest stored event are deleted. The window is relative to stored data, not the wall clock.
+- Unmapped devices keep their rows, with an empty room, so the rules ignore them.
+- The file holds home movement data. Keep it on persistent storage that only the server can read, and delete it when a home is no longer monitored.

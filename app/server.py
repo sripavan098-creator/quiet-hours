@@ -4,7 +4,8 @@ Routes
 ------
 GET  /                       single-page UI (open)
 GET  /healthz                liveness (open)
-GET  /api/status             household status (caregiver token)
+GET  /readyz                 readiness: settings present and store reachable (open, no secrets)
+GET  /api/status             household status and feed health (caregiver token)
 GET  /api/events?limit=n     newest-first event feed (caregiver token)
 GET  /api/devices            mapped devices, dev mode only (caregiver token)
 PUT  /api/devices/{id}/room  map a device to a room, dev mode only (caregiver token)
@@ -14,6 +15,7 @@ POST /api/sim/demo           simulated scenario, dev mode only
 Response codes follow Ring's delivery rules: 2xx = delivered, 4xx = permanent
 failure (no retry), 5xx = retry. A bad signature is 401 and a malformed
 payload is 400, so Ring does not retry either. Bodies over 64 KB get 413.
+Too many requests from one client get 429.
 
 Environment
 -----------
@@ -21,6 +23,7 @@ QH_ENV                 "dev" enables demo and device endpoints and allows defaul
 RING_WEBHOOK_SECRET    HMAC key from the Ring Developer Portal (required outside dev)
 QH_CAREGIVER_TOKEN     bearer token for caregiver endpoints (required outside dev, 16+ chars)
 RING_DEVICE_ZONES      JSON map {ring_device_id: zone}
+QH_DB_PATH             SQLite file (default data/quiet_hours.db); use persistent storage in production
 PORT                   listen port (default 8080)
 """
 from __future__ import annotations
@@ -32,7 +35,9 @@ import os
 import re
 import sys
 import threading
-from datetime import datetime
+import time
+from collections import deque
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Mapping
@@ -41,12 +46,15 @@ from urllib.parse import parse_qs, unquote, urlparse
 import analysis
 import ring_adapter
 import sim
+from store import EventStore
 
 STATIC_DIR = Path(__file__).parent / "static"
+DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "quiet_hours.db"
 SIGNATURE_HEADER = "X-Signature"
 MAX_BODY_BYTES = 64 * 1024
 MIN_TOKEN_LEN = 16
 DEV_DEFAULT_SECRET = b"dev-only-change-me"
+FEED_GAP = timedelta(hours=12)  # daytime with no events this long: check the connection
 
 DEV_MODE = os.environ.get("QH_ENV") == "dev"
 WEBHOOK_SECRET = os.environ.get("RING_WEBHOOK_SECRET", DEV_DEFAULT_SECRET.decode()).encode()
@@ -57,9 +65,42 @@ DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,120}$")
 ZONE_MAP = {f"sim.{z}": z for z in analysis.ZONE_IDS}
 ZONE_MAP.update(ring_adapter.load_zone_map())
 
-_lock = threading.Lock()
-_events: dict[str, dict] = {}      # event_id -> internal event (dedupe on id)
+_lock = threading.Lock()           # guards ZONE_MAP and _demo_now
 _demo_now: datetime | None = None  # set when a demo scenario is loaded
+STORE = EventStore(":memory:")     # replaced by main() with the file in QH_DB_PATH
+
+
+class RateLimiter:
+    """Sliding-window limit per client. Memory is bounded by clearing when full."""
+
+    def __init__(self, limit: int, window_s: float = 60.0):
+        self.limit = limit
+        self.window = window_s
+        self._hits: dict[str, deque] = {}
+        self._lock = threading.Lock()
+
+    def allow(self, key: str, now: float | None = None) -> bool:
+        now = time.monotonic() if now is None else now
+        with self._lock:
+            if len(self._hits) > 10_000:
+                self._hits.clear()
+            q = self._hits.setdefault(key, deque())
+            while q and now - q[0] > self.window:
+                q.popleft()
+            if len(q) >= self.limit:
+                return False
+            q.append(now)
+            return True
+
+
+WEBHOOK_LIMITER = RateLimiter(limit=300)
+READ_LIMITER = RateLimiter(limit=120)
+
+
+def log(event: str, **fields) -> None:
+    """One JSON line per notable event. Never log room names, device ids or addresses."""
+    line = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "event": event, **fields}
+    print(json.dumps(line), file=sys.stderr, flush=True)
 
 
 def config_problems(env: Mapping[str, str]) -> list[str]:
@@ -73,6 +114,15 @@ def config_problems(env: Mapping[str, str]) -> list[str]:
     if len(token) < MIN_TOKEN_LEN:
         problems.append(f"QH_CAREGIVER_TOKEN is required outside QH_ENV=dev and must be at least {MIN_TOKEN_LEN} characters")
     return problems
+
+
+def readiness(env: Mapping[str, str] = os.environ) -> tuple[bool, dict]:
+    """Readiness checks. Reports status words only, never the values themselves."""
+    checks = {
+        "config": "ok" if not config_problems(env) else "missing settings",
+        "store": "ok" if STORE.ping() else "unavailable",
+    }
+    return all(v == "ok" for v in checks.values()), checks
 
 
 def sign(body: bytes, secret: bytes = WEBHOOK_SECRET) -> str:
@@ -109,31 +159,38 @@ def handle_webhook(raw: bytes, signature_header: str | None) -> tuple[int, dict]
 
 
 def ingest(events: list[dict]) -> int:
-    added = 0
-    with _lock:
-        for ev in events:
-            if ev["event_id"] in _events:
-                continue
-            _events[ev["event_id"]] = ev
-            added += 1
-    return added
+    return STORE.add(events)
 
 
 def _event_tuples() -> list[tuple[str, datetime]]:
-    with _lock:
-        return [(ev["device_id"], datetime.fromisoformat(ev["created_at"])) for ev in _events.values()]
+    return [(ev["device_id"], datetime.fromisoformat(ev["created_at"])) for ev in STORE.all()]
 
 
 def current_status(now: datetime | None = None) -> dict:
     if now is None:
         now = _demo_now or datetime.now(analysis.IST)
-    return analysis.assess(_event_tuples(), now)
+    status = analysis.assess(_event_tuples(), now)
+    status["feed"] = feed_health(now)
+    return status
+
+
+def feed_health(now: datetime) -> dict:
+    """Is the Ring feed itself working? A quiet home and a broken feed look alike otherwise.
+
+    Reported beside the status, not as an alert: it says the data may be
+    incomplete, which is different from the home being quiet.
+    """
+    now_home = analysis.to_home_time(now)
+    last = STORE.newest_created_at()
+    if last is None:
+        return {"last_event_at": None, "gap_warning": True}
+    last_home = analysis.to_home_time(last)
+    gap = analysis.is_daytime(now_home) and (now_home - last_home) > FEED_GAP
+    return {"last_event_at": last_home.isoformat(), "gap_warning": gap}
 
 
 def recent_events(limit: int = 30) -> list[dict]:
-    with _lock:
-        items = sorted(_events.values(), key=lambda e: e["created_at"], reverse=True)
-    return items[:limit]
+    return STORE.recent(limit)
 
 
 def list_devices() -> dict:
@@ -162,9 +219,7 @@ def set_device_room(ring_id: str, room: str) -> None:
             ZONE_MAP[ring_id] = room
         else:
             ZONE_MAP.pop(ring_id, None)
-        for ev in _events.values():
-            if ev.get("ring_device_id") == ring_id:
-                ev["device_id"] = room
+    STORE.remap(ring_id, room)
 
 
 def load_demo(scenario: str) -> dict:
@@ -172,8 +227,8 @@ def load_demo(scenario: str) -> dict:
     today = datetime.now(analysis.IST).date()
     events, now = sim.generate(scenario, today)
     with _lock:
-        _events.clear()
         _demo_now = now
+    STORE.clear()
     for internal in events:
         body = json.dumps(ring_adapter.to_ring_payload(internal)).encode()
         code, res = handle_webhook(body, sign(body))
@@ -182,8 +237,14 @@ def load_demo(scenario: str) -> dict:
     return current_status()
 
 
+def client_key(headers, address: str) -> str:
+    """Client identity for rate limits. Behind a proxy, the first forwarded address."""
+    forwarded = (headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+    return forwarded or address
+
+
 class Handler(BaseHTTPRequestHandler):
-    server_version = "QuietHours/0.3"
+    server_version = "QuietHours/0.5"
 
     def log_message(self, fmt, *args):
         pass
@@ -215,10 +276,19 @@ class Handler(BaseHTTPRequestHandler):
         length = max(self._declared_length(), 0)
         return self.rfile.read(length) if length else b""
 
+    def _throttled(self, limiter: RateLimiter) -> bool:
+        """Send 429 and return True if this client is over its limit."""
+        if limiter.allow(client_key(self.headers, self.client_address[0])):
+            return False
+        log("rate_limited")
+        self._send(429, {"error": "too many requests, slow down"})
+        return True
+
     def _guard(self) -> bool:
         """Send 401 and return False unless the caregiver token is valid."""
         if caregiver_authorised(self.headers.get("Authorization")):
             return True
+        log("auth_failed")
         self._send(401, {"error": "caregiver sign-in required"})
         return False
 
@@ -228,15 +298,21 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, (STATIC_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")
         if url.path == "/healthz":
             return self._send(200, {"ok": True})
+        if url.path == "/readyz":
+            ok, checks = readiness()
+            return self._send(200 if ok else 503, {"ready": ok, "checks": checks})
         if url.path == "/api/status":
-            if not self._guard():
+            if self._throttled(READ_LIMITER) or not self._guard():
                 return
             return self._send(200, current_status())
         if url.path == "/api/events":
-            if not self._guard():
+            if self._throttled(READ_LIMITER) or not self._guard():
                 return
-            limit = min(int(parse_qs(url.query).get("limit", ["30"])[0]), 200)
-            return self._send(200, {"events": recent_events(limit)})
+            try:
+                limit = min(int(parse_qs(url.query).get("limit", ["30"])[0]), 200)
+            except ValueError:
+                return self._send(400, {"error": "limit must be a number"})
+            return self._send(200, {"events": recent_events(max(limit, 1))})
         if url.path == "/api/devices":
             if not DEV_MODE:
                 return self._send(404, {"error": "not found"})
@@ -271,7 +347,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         url = urlparse(self.path)
         if url.path == "/api/ring/webhook":
+            if self._throttled(WEBHOOK_LIMITER):
+                return
             code, res = handle_webhook(self._body(), self.headers.get(SIGNATURE_HEADER))
+            log("webhook", status=code, accepted=res.get("accepted", 0) if code == 200 else None)
             return self._send(code, res)
         if url.path == "/api/sim/demo":
             if not DEV_MODE:
@@ -286,11 +365,16 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    global STORE
     problems = config_problems(os.environ)
     if problems:
         for p in problems:
             print(f"Refusing to start: {p}", file=sys.stderr)
         sys.exit(2)
+    db_path = os.environ.get("QH_DB_PATH", str(DEFAULT_DB_PATH))
+    if db_path != ":memory:":
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    STORE = EventStore(db_path)
     if DEV_MODE:
         print("Running in development mode: demo and device endpoints are enabled.")
     port = int(os.environ.get("PORT", "8080"))

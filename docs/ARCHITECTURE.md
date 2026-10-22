@@ -115,3 +115,10 @@ Single process on a small host behind HTTPS. See `DEPLOYMENT.md`.
 | Pure rules module | Testable; deterministic demo | Rules inside the server (harder to test) |
 | Simulator uses the webhook path | Exercises real verification and normalisation | Direct store writes (faster, but skips the path judges care about) |
 | Polling, not push | Simple; adequate for a status page | WebSocket or server-sent events (later) |
+
+
+## Storage and operations (Gate 5)
+
+- `app/store.py` holds the SQLite event store. It uses the standard library `sqlite3` module, so no runtime dependency is added.
+- Logging writes one JSON line per webhook outcome and per refused request, to stderr. It records status codes and counts only: no room names, device IDs, addresses or event contents.
+- Rate limits are in memory per process. With more than one process, each process counts separately, so run one process on the free tier.

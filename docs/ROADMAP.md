@@ -71,7 +71,9 @@ Decision owner: project author. Recommendation: 3.3 if the answer to 3.1 is not 
 
 Exit check: a first-time user can connect a device, assign rooms, and understand an alert without help.
 
-## Gate 5: Hardening (P2)
+## Gate 5: Hardening (P2): complete
+
+All five items are built and tested: SQLite store with 14-day retention (5.1), JSON logs with status codes and counts only (5.2), per-client rate limits returning 429 (5.3), duplicate handling plus a feed-gap report (5.4), and `/healthz` and `/readyz` (5.5). Persistence across Render redeploys still needs a persistent disk, which is a deployment decision.
 
 | # | Item | Done when |
 |---|---|---|

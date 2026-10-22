@@ -17,7 +17,7 @@ Requires Python 3.9+. No third-party packages.
 
 ```bash
 cd quiet-hours
-python3 -m unittest discover -s tests -v   # 49 tests
+python3 -m unittest discover -s tests -v   # 66 tests
 cd app && python3 server.py                # http://localhost:8080
 ```
 
@@ -52,7 +52,7 @@ browser ◄── GET /api/status ◄── analysis.assess(events, now) ◄─�
 
 | Part | Status |
 |---|---|
-| Event store, routine analysis, alert rules | Working, tested (49 tests) |
+| Event store, routine analysis, alert rules | Working, tested (66 tests) |
 | Webhook intake | Working against the documented shape: `X-Signature: sha256=<hex HMAC of the raw body>`, payload `{meta, data}`, event type in `data.type`, device in `data.attributes.source`, time in `meta.time`. Responses follow Ring's rules: 401 bad signature, 400 malformed, both not retried. |
 | Device-to-room mapping | `RING_DEVICE_ZONES` (env). Setup UI for it is not built. |
 | Partner API client | Token exchange, refresh-on-401, and `GET /v1/devices` are implemented and unit-tested with a fake transport. **Not run against live Ring.** |

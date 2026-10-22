@@ -50,15 +50,14 @@ Quiet Hours is a caretaker's home-watch built on Ring device events. It alerts a
 | `app/ring_adapter.py` | Ring payload ↔ internal event |
 | `app/ring_client.py` | Ring Partner API client |
 | `app/sim.py` | Simulator |
+| `app/store.py` | SQLite event store (stdlib) |
 | `app/static/index.html` | UI |
 | `tests/` | Unit and integration tests |
 | `docs/` | PRD, roadmap, architecture, API, security, deployment, testing, rules, data |
 
 ## Known issues to be aware of
 
-- Timestamps keep their own offsets; rules assume IST until Gate 1.4 fixes this.
-- The demo endpoint is open; Gate 1.2 fixes this.
-- The status endpoints are unauthenticated; Gate 1.3 fixes this.
+- Gate 1 (IST times, dev-only demo route, caregiver token, body limit) is done and tested.
 - The medicine-box check was removed (Gate 3.3). The morning check uses kitchen motion.
 
 ## When unsure
