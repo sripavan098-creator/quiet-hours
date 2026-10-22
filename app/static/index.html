@@ -242,7 +242,6 @@
     { id: "kitchen",    label: "Kitchen",      r: [0.06, 0.10, 0.44, 0.40] },
     { id: "bathroom",   label: "Bathroom",     r: [0.54, 0.10, 0.40, 0.22] },
     { id: "bedroom",    label: "Bedroom",      r: [0.54, 0.36, 0.40, 0.36] },
-    { id: "medicine",   label: "Medicine box", r: [0.06, 0.54, 0.20, 0.18] },
     { id: "front_door", label: "Front door",   r: [0.30, 0.76, 0.20, 0.16] },
   ];
   const LABEL = Object.fromEntries(ROOMS.map(r => [r.id, r.label]));
@@ -436,7 +435,7 @@
       items.push(s.home.baseline_gap_minutes != null
         ? `Usual gap: ${fmtMins(s.home.baseline_gap_minutes)}, from the last 7 days.`
         : "Usual gap: still learning. Until five gaps are seen, the 3-hour minimum applies.");
-      items.push(`Routine checks: the front door (before 12:00) and the medicine box (before 10:00) only alert when this home had the usual event on at least 4 of the last 7 days.`);
+      items.push(`Routine checks: the front door (before 12:00) and the kitchen (before 10:00) only alert when this home had the usual event on at least 4 of the last 7 days.`);
     }
     items.push(`Days of history used: ${s.observed_days}.`);
     for (const text of items) {

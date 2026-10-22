@@ -50,7 +50,7 @@ Quiet Hours offers a third option: know when the routine breaks, without seeing 
 | Bathroom | Motion | Yes | No |
 | Bedroom | Motion | Yes | No |
 | Front door | Motion (door-facing camera) | No | Usual errand before 12:00 |
-| Medicine box | None documented by Ring (see §12) | No | Morning check before 10:00 |
+| Kitchen (medicine box removed) | Motion, documented by Ring | Yes | Morning check before 10:00 |
 
 ## 7. Rules
 
@@ -62,7 +62,7 @@ All rules run only between 07:00 and 22:00 in the home's local time (IST in v1.0
 
 Status: `ok` below 75% of the threshold; `watch` between 75% and 100%; `alert` above the threshold.
 
-**R2. Routine checks.** The front door (by 12:00) and the medicine box (by 10:00) alert only when:
+**R2. Routine checks.** The front door (by 12:00) and the kitchen (by 10:00) alert only when:
 - there are at least 4 days of history in the last 7, and
 - on at least 4 of those days, the usual event happened before the check hour, and
 - today nothing has happened yet, and it is past the check hour.
@@ -112,7 +112,7 @@ Status: `ok` below 75% of the threshold; `watch` between 75% and 100%; `alert` a
 
 | ID | Question or risk | Impact | Plan |
 |---|---|---|---|
-| Q1 | Ring has no documented contact-sensor webhook type, so the medicine check cannot run on real devices | Medicine check is simulated only | Confirm with Ring, or replace with motion-based morning check (decision needed) |
+| Q1 | Ring has no documented contact-sensor webhook type, so the medicine check cannot run on real devices | Medicine check removed; kitchen morning check uses motion only (Gate 3.3) | Decided. Revisit only if Ring documents a contact-sensor event |
 | Q2 | Event-history query parameters not confirmed | Historical backfill not possible yet | Confirm from Ring's Event History documentation |
 | Q3 | No live Ring credentials yet | Live path untested | Obtain access; test in Playground first |
 | Q4 | Deadline not stated | Scope may be cut | Confirm; roadmap has a cut order |

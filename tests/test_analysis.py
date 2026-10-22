@@ -27,12 +27,38 @@ class SimulatorScenarios(unittest.TestCase):
         zones = {a["zone"] for a in status["alerts"]}
         self.assertIn("home", zones)
         self.assertIn("front_door", zones)
-        self.assertNotIn("medicine", zones)  # medicine was logged this morning
+        self.assertNotIn("kitchen", zones)  # the kitchen was used this morning, before 09:40
+        self.assertNotIn("medicine", {z for z, _, _ in analysis.ZONES})  # no medicine signal
 
     def test_simulator_marks_source(self):
         events, _ = sim.generate("normal", date(2026, 10, 21))
         self.assertTrue(all(e["source"] == "simulator" for e in events))
         self.assertTrue(all(e["event_id"].startswith("evt_") for e in events))
+
+
+class MorningKitchenCheck(unittest.TestCase):
+    def history(self):
+        # Four or more past days, each with kitchen activity at 07:30.
+        return [("kitchen", ist(2026, 10, d, 7, 30)) for d in range(14, 21)]
+
+    def test_alerts_when_kitchen_not_used_by_ten(self):
+        status = analysis.assess(self.history(), ist(2026, 10, 21, 10, 30))
+        zones = {a["zone"] for a in status["alerts"]}
+        self.assertIn("kitchen", zones)
+
+    def test_quiet_when_kitchen_used_this_morning(self):
+        events = self.history() + [("kitchen", ist(2026, 10, 21, 7, 45))]
+        status = analysis.assess(events, ist(2026, 10, 21, 10, 30))
+        self.assertNotIn("kitchen", {a["zone"] for a in status["alerts"]})
+
+    def test_silent_before_check_hour(self):
+        status = analysis.assess(self.history(), ist(2026, 10, 21, 9, 30))
+        self.assertNotIn("kitchen", {a["zone"] for a in status["alerts"]})
+
+    def test_needs_four_days_of_history(self):
+        events = [("kitchen", ist(2026, 10, d, 7, 30)) for d in (19, 20)]
+        status = analysis.assess(events, ist(2026, 10, 21, 10, 30))
+        self.assertNotIn("kitchen", {a["zone"] for a in status["alerts"]})
 
 
 class SilenceRules(unittest.TestCase):

@@ -9,8 +9,9 @@ Signals
   bedroom). The threshold adapts to each home: at least MIN_SILENCE, or
   SILENCE_FACTOR times the median daytime gap between movements, whichever is
   longer. A quiet morning is only worrying relative to that home's own rhythm.
-* Missed routine: the front door (errand) or the medicine box is usually
-  touched before a check hour, but today nothing has happened by then.
+* Missed routine: the front door (errand) or the kitchen is usually touched
+  before a check hour, but today nothing has happened by then. The medicine
+  box is not used: Ring documents no contact-sensor event type.
 
 Only daytime (DAY_START_H..DAY_END_H local hours) is judged, so night-time
 stillness is never treated as an emergency.
@@ -36,7 +37,6 @@ ZONES = [
     ("bathroom", "Bathroom", True),
     ("bedroom", "Bedroom", True),
     ("front_door", "Front door", False),
-    ("medicine", "Medicine box", False),
 ]
 ZONE_IDS = {z for z, _, _ in ZONES}
 INTERIOR = {z for z, _, i in ZONES if i}
@@ -53,7 +53,7 @@ MIN_HISTORY_DAYS = 4
 # happened by this hour, the routine check fires.
 ROUTINE_CHECKS = [
     ("front_door", 12, "Usual morning errand has not happened"),
-    ("medicine", 10, "Morning medicine check not logged"),
+    ("kitchen", 10, "Morning kitchen activity not seen"),
 ]
 
 
@@ -144,7 +144,7 @@ def assess(
         else:
             home_status = "ok"
 
-    # ---- Routine checks (errand, medicine) ------------------------------
+    # ---- Routine checks (errand, morning kitchen) -----------------------
     routine_status: dict[str, str] = {}
     for zone, check_h, label in ROUTINE_CHECKS:
         times = by_zone[zone]

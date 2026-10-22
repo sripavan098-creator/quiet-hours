@@ -29,7 +29,7 @@ Source: the Amazon Developer Hackathon brief. Status is as of this commit. "Bloc
 1. **Live Ring test (Phase 2 in ROADMAP).** No Ring developer credentials yet. Without them, the demo is simulated. That is acceptable if the video and text say so, but a judge scoring "Tech implementation" will value a real webhook.
 2. **Repo visibility and GitHub account (S4, S5).**
 3. **Deadline.** Not in the brief. Needed to schedule the video and feedback.
-4. **Medicine-box decision.** The medicine check has no documented Ring signal. Either confirm one or replace it with the motion-based morning check.
+4. **Medicine-box decision: resolved.** The medicine check was replaced with a motion-based kitchen morning check (Gate 3.3).
 
 ## Judging criteria self-assessment
 
@@ -44,7 +44,7 @@ Scored as a judge would, out of 10, against the brief. Scores assume the simulat
 
 ## Next actions, in order
 
-1. Author decisions: repo visibility, GitHub account, deadline, medicine approach, Open Source entry.
+1. Author decisions: repo visibility, GitHub account, deadline, Open Source entry.
 2. Ring developer access, then Phase 2 (live path).
 3. Demo video (script ready) and product feedback (outline ready).
 4. Submission text from PRD §1–3.

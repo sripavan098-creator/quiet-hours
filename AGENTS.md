@@ -59,7 +59,7 @@ Quiet Hours is a caretaker's home-watch built on Ring device events. It alerts a
 - Timestamps keep their own offsets; rules assume IST until Gate 1.4 fixes this.
 - The demo endpoint is open; Gate 1.2 fixes this.
 - The status endpoints are unauthenticated; Gate 1.3 fixes this.
-- The medicine-box check has no real Ring signal yet (PRD Q1).
+- The medicine-box check was removed (Gate 3.3). The morning check uses kitchen motion.
 
 ## When unsure
 

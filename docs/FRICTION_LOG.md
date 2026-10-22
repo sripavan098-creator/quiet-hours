@@ -78,6 +78,42 @@ Severity scale: **Critical** blocks the build · **High** costs hours · **Mediu
 - **Suggestion:** Make the sample app verify the signature the same way the reference documents it, and show the full verification code.
 - **Status:** Open. Unverified until a real webhook arrives.
 
+## F-007: Event-history timestamps are epoch milliseconds
+
+- **Date:** 2026-10-22
+- **Task:** Read event timestamps from `GET /v1/history/devices/{id}/events` and compare them with webhook timestamps.
+- **Steps:** Called the endpoint in the Developer Playground with the device ID in the path, and no query parameters.
+- **Expected:** One timestamp format across the API, as ISO 8601, the same as `meta.time` in webhooks and `reported_at` in device status.
+- **Actual:** `start` and `end` are epoch milliseconds (for example `1792663221791`). Webhook `meta.time` and device status `reported_at` are ISO 8601 with a `Z` suffix.
+- **Severity:** Medium (every consumer needs a special case).
+- **Workaround:** Convert the values in the client. Not yet written.
+- **Suggestion:** Use one timestamp format everywhere, or state the unit in the field name, such as `start_ms`.
+- **Status:** Open.
+
+## F-008: Event history on the test device contains only on-demand sessions
+
+- **Date:** 2026-10-22
+- **Task:** Find motion events for the Playground device in event history.
+- **Steps:** Called the event-history endpoint for the device in the Playground.
+- **Expected:** Motion events listed for a device whose capabilities include motion detection.
+- **Actual:** Two events, both with `event_type: "on_demand"`, empty `cv_detections`, and `is_third_party_reviewed: true`. No motion events.
+- **Severity:** Medium (history cannot be used to confirm motion).
+- **Workaround:** Motion is taken only from webhooks. The rules ignore `on_demand` events.
+- **Suggestion:** Document every `event_type` value and what each one covers, with one example per type.
+- **Status:** Open.
+
+## F-009: No way to send a test webhook without a physical device
+
+- **Date:** 2026-10-22
+- **Task:** Trigger a signed webhook delivery to our endpoint from the Playground, without a physical device.
+- **Steps:** Opened the Playground's "Simulate live view event" options (Package, Vehicle, Motion).
+- **Expected:** A test-delivery option that sends a signed webhook to a configured URL.
+- **Actual:** The simulate options start a live-view session. They do not call our webhook URL, and no test-delivery option was found.
+- **Severity:** High (blocks end-to-end verification of the webhook path without hardware).
+- **Workaround:** Simulated events sent through the same signed path, and labelled as simulated.
+- **Suggestion:** Add a "send test webhook" action that signs the body with the app's signing key.
+- **Status:** Open.
+
 ---
 
 ## Template for new entries

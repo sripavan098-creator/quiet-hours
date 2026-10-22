@@ -2,10 +2,10 @@
 
 A caretaker's view of an ordinary home, built on Ring-style device events.
 
-Quiet Hours watches the rhythm of a home (kitchen, bathroom, bedroom movement, the front door, a medicine box) and tells a remote family member or caregiver when that rhythm breaks. It never shows live video. It learns what "normal" looks like for each home and raises a calm alert only when a day falls out of step, for example:
+Quiet Hours watches the rhythm of a home (kitchen, bathroom and bedroom movement, the front door) and tells a remote family member or caregiver when that rhythm breaks. It never shows live video. It learns what "normal" looks like for each home and raises a calm alert only when a day falls out of step, for example:
 
 - No movement in the home for longer than this household usually goes during the day.
-- The usual morning errand or medicine check has not happened by the hour it normally does.
+- The usual morning errand or kitchen activity has not happened by the hour it normally does.
 
 Night-time stillness is never treated as an alarm.
 
@@ -17,7 +17,7 @@ Requires Python 3.9+. No third-party packages.
 
 ```bash
 cd quiet-hours
-python3 -m unittest discover -s tests -v   # 24 tests
+python3 -m unittest discover -s tests -v   # 49 tests
 cd app && python3 server.py                # http://localhost:8080
 ```
 
@@ -30,7 +30,7 @@ export RING_WEBHOOK_SECRET="the-signing-key-from-the-developer-portal"
 export RING_DEVICE_ZONES='{"ava1.ring.device.<id>": "kitchen", "ava1.ring.device.<id2>": "front_door"}'
 ```
 
-Valid rooms are `kitchen`, `bathroom`, `bedroom`, `front_door` and `medicine`.
+Valid rooms are `kitchen`, `bathroom`, `bedroom` and `front_door`.
 
 ## How it works
 
@@ -42,7 +42,7 @@ browser ◄── GET /api/status ◄── analysis.assess(events, now) ◄─�
 
 - `app/analysis.py` is pure logic with no I/O. It takes events and a clock and returns a status, so every rule is unit-tested and the demo is deterministic.
   - **Home silence:** the threshold is the longer of 3 hours or 3× the median daytime gap between movements in the last 7 days. A home that normally moves every ten minutes gets a tighter threshold than one that moves hourly, but never less than 3 hours.
-  - **Routine checks:** the front door (by 12:00) and medicine box (by 10:00) only alert when the home has at least 4 days of history showing that rhythm.
+  - **Routine checks:** the front door (by 12:00) and the kitchen (by 10:00) only alert when the home has at least 4 days of history showing that rhythm.
   - Only 07:00–22:00 local time is judged.
 - `app/sim.py` generates Ring-shaped events (`event_id`, `device_id`, `created_at`, `kind`). Every record is tagged `"source": "simulator"`.
 - `app/server.py` is a standard-library HTTP server. Demo data goes through the same signed webhook path as real events, so the verification code is exercised end to end.
@@ -52,7 +52,7 @@ browser ◄── GET /api/status ◄── analysis.assess(events, now) ◄─�
 
 | Part | Status |
 |---|---|
-| Event store, routine analysis, alert rules | Working, tested (16 tests) |
+| Event store, routine analysis, alert rules | Working, tested (49 tests) |
 | Webhook intake | Working against the documented shape: `X-Signature: sha256=<hex HMAC of the raw body>`, payload `{meta, data}`, event type in `data.type`, device in `data.attributes.source`, time in `meta.time`. Responses follow Ring's rules: 401 bad signature, 400 malformed, both not retried. |
 | Device-to-room mapping | `RING_DEVICE_ZONES` (env). Setup UI for it is not built. |
 | Partner API client | Token exchange, refresh-on-401, and `GET /v1/devices` are implemented and unit-tested with a fake transport. **Not run against live Ring.** |

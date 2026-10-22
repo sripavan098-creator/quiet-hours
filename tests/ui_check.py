@@ -135,7 +135,7 @@ def main():
             phone.check("#consent")
             phone.wait_for_function("!document.getElementById('setup-fields').disabled")
             rows = phone.locator("#device-list .device").count()
-            check("setup lists the demo devices", rows == 5, f"rows {rows}")
+            check("setup lists the demo devices", rows == 4, f"rows {rows}")
             phone.locator("#device-list select").first.select_option("bedroom")
             phone.wait_for_function("document.getElementById('setup-status').textContent.includes('now in')")
             check("room change confirmed", True)

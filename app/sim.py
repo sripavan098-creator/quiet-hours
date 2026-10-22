@@ -18,7 +18,6 @@ DEVICE_NAMES = {
     "bathroom": "Bathroom",
     "bedroom": "Bedroom",
     "front_door": "Front door",
-    "medicine": "Medicine box",
 }
 
 DEMO_NOW_TIME = (14, 30)
@@ -44,9 +43,8 @@ def _at(day: date, h: int, m: int, rng: random.Random, spread: int = 0) -> datet
 
 
 def routine_day(day: date, rng: random.Random) -> list[dict]:
-    """One ordinary day: morning, midday and evening movement, errand and medicine."""
+    """One ordinary day: morning, midday and evening movement, and the errand."""
     evts = []
-    evts.append(_event("medicine", "contact_open", _at(day, 8, 5, rng, spread=8)))
     for k in range(3):
         evts.append(_event("kitchen", "motion", _at(day, 7, 10 + k * 8, rng)))
     evts.append(_event("bathroom", "motion", _at(day, 7, 25, rng)))
@@ -88,7 +86,7 @@ def generate(scenario: str, today: date, seed: int = 7) -> tuple[list[dict], dat
         when = datetime.fromisoformat(ev["created_at"])
         if when > now:
             continue
-        if silence_from and when >= silence_from and ev["device_id"] != "medicine":
+        if silence_from and when >= silence_from:
             continue
         events.append(ev)
 

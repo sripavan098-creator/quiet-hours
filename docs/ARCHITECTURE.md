@@ -58,7 +58,7 @@ Developer ───────► │ POST /api/sim/demo ── sim.generate() 
 |---|---|---|
 | Interior events (kitchen, bathroom, bedroom) | Silence since last movement vs threshold | Home status |
 | Front door events | Usual before 12:00, missing today | Alert |
-| Medicine box events | Usual before 10:00, missing today | Alert |
+| Kitchen activity | Usual before 10:00, missing today | Alert |
 
 Rules only run between 07:00 and 22:00 local time. The threshold is `max(3 h, 3 × median daytime gap over 7 days)`, falling back to 3 h with fewer than 5 gaps.
 

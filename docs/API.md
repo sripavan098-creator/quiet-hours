@@ -5,7 +5,7 @@ Base URL: `http://localhost:8080` in development. All responses are JSON except 
 ## Conventions
 
 - Timestamps are ISO 8601 with an offset (IST, `+05:30`, in v1.0).
-- Room identifiers: `kitchen`, `bathroom`, `bedroom`, `front_door`, `medicine`.
+- Room identifiers: `kitchen`, `bathroom`, `bedroom`, `front_door`.
 - Errors return `{"error": "<message>"}`.
 
 ## Endpoints
@@ -52,7 +52,7 @@ Household status as of now. In demo mode, "now" is the demo clock.
   ],
   "alerts": [
     {
-      "zone": "home | front_door | medicine",
+      "zone": "home | front_door | kitchen",
       "severity": "alert",
       "message": "Plain-language explanation"
     }

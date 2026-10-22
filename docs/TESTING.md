@@ -8,7 +8,7 @@ Run from the project root:
 python3 -m unittest discover -s tests -v
 ```
 
-24 tests, standard library only, under one second.
+49 tests, standard library only, under one second.
 
 | File | Count | Covers |
 |---|---|---|

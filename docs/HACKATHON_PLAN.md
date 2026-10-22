@@ -70,7 +70,7 @@ Ring facts used, from the Ring developer docs:
 - Simulator with two scenarios: ordinary day and collapse
 - Immersive UI with demo controls
 - README, MIT license, `.gitignore`
-- 24 passing tests
+- 49 passing tests
 
 **Not done**
 - Live Ring test: no developer credentials yet

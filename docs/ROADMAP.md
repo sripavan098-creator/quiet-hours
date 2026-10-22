@@ -4,7 +4,7 @@ Planning is by gate, not by calendar, because the hackathon deadline is not yet 
 
 ## Current position
 
-Gate 0 (local build) is complete: 24 tests pass, the code is committed, and the demo runs.
+Gates 0 and 1 are complete in code. Gate 3.3 is done (kitchen morning check replaces the medicine check). Gate 2 is partly done: 2.3 and 2.5 are done, 2.6 is partly done, and 2.2 and 2.4 need Ring access or hardware. 49 unit tests and the browser checks pass.
 
 ## Gate 0: Local build (complete)
 
@@ -55,7 +55,7 @@ Fallback: if credentials are not available in time, the demo uses the simulator 
 |---|---|---|
 | 3.1 | Ask Ring whether a contact-sensor event type exists | Answer recorded in `docs/HACKATHON_PLAN.md` |
 | 3.2 | If yes: add the event type to the adapter and test it | Medicine check works on a real device |
-| 3.3 | If no: replace medicine check with a motion-based morning check | Rule R2 covers the kitchen; medicine claims removed from UI and video |
+| 3.3 | If no: replace medicine check with a motion-based morning check | **Done.** Kitchen morning check replaces the medicine check; medicine removed from rules, simulator, UI and copy. The video must not mention a medicine box |
 
 Decision owner: project author. Recommendation: 3.3 if the answer to 3.1 is not received within one working day.
 
@@ -114,6 +114,6 @@ Gate 1 does not depend on Ring access and can start now.
 ## Decisions needed from the author
 
 1. Confirm the deadline.
-2. Confirm the medicine-box approach (Gate 3).
+2. Medicine-box approach: decided (Gate 3.3).
 3. Confirm repo visibility (Gate 6.2).
 4. Confirm whether to enter the Open Source mini challenge.

@@ -30,7 +30,7 @@ Not stored, deliberately: video, audio, images, free-text, sub-type detail beyon
 ## Identifiers
 
 - `event_id` comes from Ring and is unique per event. Duplicates are ignored, so Ring's retries do not double-count.
-- Room identifiers are fixed: `kitchen`, `bathroom`, `bedroom`, `front_door`, `medicine`.
+- Room identifiers are fixed: `kitchen`, `bathroom`, `bedroom`, `front_door`.
 - The device map (`RING_DEVICE_ZONES`) is the only link between a Ring device and a room.
 
 ## Retention
@@ -50,7 +50,7 @@ SQLite, one file, no server.
 ```sql
 CREATE TABLE events (
   event_id      TEXT PRIMARY KEY,
-  room          TEXT NOT NULL CHECK (room IN ('kitchen','bathroom','bedroom','front_door','medicine')),
+  room          TEXT NOT NULL CHECK (room IN ('kitchen','bathroom','bedroom','front_door')),
   ring_device_id TEXT NOT NULL,
   kind          TEXT NOT NULL,
   ring_type     TEXT NOT NULL,
@@ -64,7 +64,7 @@ CREATE INDEX idx_events_time      ON events (created_at);
 
 CREATE TABLE device_map (
   ring_device_id TEXT PRIMARY KEY,
-  room           TEXT NOT NULL CHECK (room IN ('kitchen','bathroom','bedroom','front_door','medicine')),
+  room           TEXT NOT NULL CHECK (room IN ('kitchen','bathroom','bedroom','front_door')),
   updated_at     TEXT NOT NULL
 );
 
