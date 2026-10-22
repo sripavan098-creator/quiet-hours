@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quiet Hours</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #050910;
+    --ink-2: #0a1321;
+    --line: rgba(143, 196, 230, 0.14);
+    --beam: #9fe6ff;
+    --lit: #5fe0cf;
+    --watch: #9fb8ff;
+    --alarm: #ff6b6b;
+    --text: #d8e7f2;
+    --muted: #6a8197;
+    --pad: clamp(16px, 3vw, 36px);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ink); color: var(--text); }
+  body {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 14px;
+    overflow-x: hidden;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  h1, h2, .head { font-family: "Space Grotesk", system-ui, sans-serif; }
+
+  .shell {
+    min-height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+    gap: 0;
+  }
+  @media (max-width: 860px) { .shell { grid-template-columns: 1fr; } }
+
+  /* ---------- the house, under the beam ---------- */
+  .stage { position: relative; min-height: 62vh; background:
+      radial-gradient(120% 90% at 0% 0%, #0b1a2c 0%, var(--ink) 60%); overflow: hidden; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .caption {
+    position: absolute; left: var(--pad); bottom: var(--pad); right: var(--pad);
+    color: var(--muted); font-size: 12px; letter-spacing: .04em;
+    pointer-events: none;
+  }
+  .caption b { color: var(--beam); font-weight: 500; }
+
+  /* ---------- the keeper's log ---------- */
+  .log {
+    padding: var(--pad);
+    border-left: 1px solid var(--line);
+    background: var(--ink-2);
+    display: flex; flex-direction: column; gap: 22px; min-width: 0;
+  }
+  .kicker { color: var(--muted); letter-spacing: .18em; text-transform: uppercase; font-size: 11px; }
+  .title { font-size: 30px; font-weight: 700; margin: 6px 0 0; letter-spacing: -.01em; }
+  .verdict { font-size: 17px; line-height: 1.45; margin: 0; }
+  .verdict.ok { color: var(--lit); }
+  .verdict.watch { color: var(--watch); }
+  .verdict.alert { color: var(--alarm); }
+
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .facts div { background: var(--ink-2); padding: 12px; }
+  .facts span { display: block; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  .facts strong { display: block; margin-top: 6px; font-family: "Space Grotesk", sans-serif; font-size: 18px; font-weight: 600; }
+
+  .alerts { display: flex; flex-direction: column; gap: 10px; }
+  .alert-item { border: 1px solid rgba(255,107,107,.45); background: rgba(255,107,107,.07); padding: 12px 14px; line-height: 1.5; }
+  .alert-item .who { color: var(--alarm); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+
+  .feed { flex: 1; min-height: 0; overflow: auto; border-top: 1px solid var(--line); padding-top: 12px; }
+  .feed ol { list-style: none; margin: 0; padding: 0; }
+  .feed li { display: grid; grid-template-columns: 56px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line); color: #a9c0d3; }
+  .feed time { color: var(--muted); }
+  .feed .room { color: var(--text); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+  button {
+    font: inherit; color: var(--text); background: transparent; cursor: pointer;
+    border: 1px solid var(--line); padding: 10px 14px; min-height: 44px;
+  }
+  button:hover, button:focus-visible { border-color: var(--beam); outline: none; }
+  button.primary { border-color: rgba(159,230,255,.55); color: var(--beam); }
+  button.danger { border-color: rgba(255,107,107,.55); color: var(--alarm); }
+
+  .fine { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="shell">
+  <section class="stage" aria-label="Floor plan of the home, lit by a sweeping beam">
+    <canvas id="scene" role="img" aria-label="Rooms light up as the beam passes over them. Quiet rooms dim; a room needing attention pulses coral."></canvas>
+    <div class="caption">
+      <b>The beam</b> sweeps the house once every 18 seconds. A room glows when it has moved recently.
+      A room turns coral only when its rhythm breaks.
+    </div>
+  </section>
+
+  <aside class="log" aria-live="polite">
+    <div>
+      <div class="kicker">Keeper's log · <span id="clock">--:--</span></div>
+      <h1 class="title" id="headline">Watching the house</h1>
+      <p class="verdict ok" id="verdict">Waiting for the first signal.</p>
+    </div>
+
+    <div class="facts" aria-label="Key facts">
+      <div><span>Last movement</span><strong id="f-last">—</strong></div>
+      <div><span>Quiet for</span><strong id="f-quiet">—</strong></div>
+      <div><span>Usual gap</span><strong id="f-usual">—</strong></div>
+    </div>
+
+    <div class="alerts" id="alerts"></div>
+
+    <div class="controls">
+      <button class="primary" id="btn-normal">Ordinary day</button>
+      <button class="danger" id="btn-collapse">Simulate a collapse</button>
+    </div>
+
+    <div class="feed">
+      <div class="kicker" style="margin-bottom:8px">Recent signals</div>
+      <ol id="feed"></ol>
+    </div>
+
+    <p class="fine">Simulated, Ring-shaped events for a demonstration home. Quiet Hours watches rhythm, not video, and does not replace emergency services. If someone may be in danger, call local emergency services now.</p>
+  </aside>
+</main>
+
+<script>
+(() => {
+  const ROOMS = [
+    // id, label, rect in unit space [x, y, w, h]
+    { id: "kitchen",    label: "Kitchen",      r: [0.06, 0.10, 0.44, 0.40] },
+    { id: "bathroom",   label: "Bathroom",     r: [0.54, 0.10, 0.40, 0.22] },
+    { id: "bedroom",    label: "Bedroom",      r: [0.54, 0.36, 0.40, 0.36] },
+    { id: "medicine",   label: "Medicine box", r: [0.06, 0.54, 0.20, 0.18] },
+    { id: "front_door", label: "Front door",   r: [0.30, 0.76, 0.20, 0.16] },
+  ];
+  const LIGHTHOUSE = { x: 0.0, y: 0.0 };
+
+  const canvas = document.getElementById("scene");
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0, dpr = 1;
+  let zoneState = {};
+  let beam = 0.35;
+  let last = performance.now();
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener("resize", resize);
+
+  function roomBox(r) {
+    const pad = Math.min(W, H) * 0.06;
+    const x = pad + r[0] * (W - 2 * pad);
+    const y = pad + r[1] * (H - 2 * pad);
+    return { x, y, w: r[2] * (W - 2 * pad), h: r[3] * (H - 2 * pad) };
+  }
+
+  function angleTo(cx, cy) { return Math.atan2(cy - LIGHTHOUSE.y * H, cx - LIGHTHOUSE.x * W); }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+
+    // faint grid, like a survey plan
+    ctx.strokeStyle = "rgba(143,196,230,0.05)";
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx < W; gx += 36) { ctx.beginPath(); ctx.moveTo(gx + .5, 0); ctx.lineTo(gx + .5, H); ctx.stroke(); }
+    for (let gy = 0; gy < H; gy += 36) { ctx.beginPath(); ctx.moveTo(0, gy + .5); ctx.lineTo(W, gy + .5); ctx.stroke(); }
+
+    const lx = LIGHTHOUSE.x * W, ly = LIGHTHOUSE.y * H;
+    const reach = Math.hypot(W, H);
+    const spread = 0.34;
+
+    // the beam
+    const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, reach);
+    grad.addColorStop(0, "rgba(159,230,255,0.22)");
+    grad.addColorStop(1, "rgba(159,230,255,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(lx, ly);
+    ctx.arc(lx, ly, reach, beam - spread, beam + spread);
+    ctx.closePath();
+    ctx.fill();
+
+    // rooms
+    for (const room of ROOMS) {
+      const b = roomBox(room.r);
+      const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+      const swept = Math.abs(normalise(angleTo(cx, cy) - beam)) < spread;
+      const state = zoneState[room.id] || "ok";
+      const pulse = 0.5 + 0.5 * Math.sin(t / 380);
+
+      let fill = "rgba(143,196,230,0.03)";
+      let stroke = "rgba(143,196,230,0.18)";
+      if (state === "ok" || state === "pending") {
+        fill = swept ? "rgba(95,224,207,0.20)" : "rgba(95,224,207,0.07)";
+        stroke = swept ? "rgba(95,224,207,0.75)" : "rgba(95,224,207,0.35)";
+      } else if (state === "watch") {
+        fill = swept ? "rgba(159,184,255,0.22)" : "rgba(159,184,255,0.08)";
+        stroke = "rgba(159,184,255,0.7)";
+      } else if (state === "alert") {
+        const a = reduce ? 0.2 : 0.10 + 0.14 * pulse;
+        fill = `rgba(255,107,107,${a + (swept ? 0.08 : 0)})`;
+        stroke = "rgba(255,107,107,0.95)";
+      }
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = state === "alert" ? 2 : 1.25;
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeRect(b.x + .5, b.y + .5, b.w, b.h);
+
+      ctx.fillStyle = state === "alert" ? "#ffb1b1" : "rgba(216,231,242,0.85)";
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      ctx.fillText(room.label.toUpperCase(), b.x + 10, b.y + 20);
+    }
+
+    // lighthouse lamp
+    ctx.fillStyle = "#cfefff";
+    ctx.beginPath(); ctx.arc(lx + 8, ly + 8, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function normalise(a) {
+    while (a > Math.PI) a -= 2 * Math.PI;
+    while (a < -Math.PI) a += 2 * Math.PI;
+    return a;
+  }
+
+  function frame(now) {
+    const dt = (now - last) / 1000; last = now;
+    if (!reduce) beam = (beam + dt * (2 * Math.PI / 18)) % (2 * Math.PI);
+    draw(now);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- data ----------
+  const $ = (id) => document.getElementById(id);
+  const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : "—";
+  const fmtMins = (m) => {
+    if (m == null) return "—";
+    const h = Math.floor(m / 60), mm = m % 60;
+    return h ? `${h}h ${String(mm).padStart(2, "0")}m` : `${mm}m`;
+  };
+
+  function renderStatus(s) {
+    zoneState = Object.fromEntries(s.zones.map(z => [z.id, z.state]));
+    $("clock").textContent = fmtTime(s.now);
+
+    const v = $("verdict"), h = $("headline");
+    if (s.state === "alert") {
+      h.textContent = "Check in now";
+      v.className = "verdict alert";
+      v.textContent = "The usual rhythm has broken. Call or visit, and call emergency services if anyone may be in danger.";
+    } else if (s.state === "watch") {
+      h.textContent = "Movement is slowing";
+      v.className = "verdict watch";
+      v.textContent = "It has been quieter than this home usually is. Nothing has broken yet.";
+    } else {
+      h.textContent = s.is_daytime ? "The house is steady" : "Resting for the night";
+      v.className = "verdict ok";
+      v.textContent = s.is_daytime
+        ? "Movement is on its usual rhythm. You will only hear from me if it changes."
+        : "Night stillness is expected. Watching resumes at 07:00.";
+    }
+
+    $("f-last").textContent = s.home.last_movement ? fmtTime(s.home.last_movement) : "—";
+    $("f-quiet").textContent = fmtMins(s.home.silence_minutes);
+    $("f-usual").textContent = s.home.baseline_gap_minutes != null ? fmtMins(s.home.baseline_gap_minutes) + " gap" : "learning";
+
+    const box = $("alerts");
+    box.innerHTML = "";
+    for (const a of s.alerts) {
+      const el = document.createElement("div");
+      el.className = "alert-item";
+      const who = document.createElement("div");
+      who.className = "who";
+      who.textContent = a.zone === "home" ? "Whole house" : (s.zones.find(z => z.id === a.zone)?.name || a.zone);
+      const msg = document.createElement("div");
+      msg.textContent = a.message;
+      el.append(who, msg);
+      box.append(el);
+    }
+  }
+
+  async function renderEvents() {
+    const res = await fetch("/api/events?limit=14", { cache: "no-store" });
+    const { events } = await res.json();
+    const names = Object.fromEntries(ROOMS.map(r => [r.id, r.label]));
+    const ol = $("feed");
+    ol.innerHTML = "";
+    for (const e of events) {
+      const li = document.createElement("li");
+      const t = document.createElement("time");
+      t.textContent = fmtTime(e.created_at);
+      const r = document.createElement("span");
+      r.className = "room";
+      r.textContent = `${names[e.device_id] || e.device_name} · ${e.kind.replace("_", " ")}`;
+      li.append(t, r);
+      ol.append(li);
+    }
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch("/api/status", { cache: "no-store" });
+      renderStatus(await res.json());
+      await renderEvents();
+    } catch (err) {
+      $("verdict").textContent = "Cannot reach the house right now. Retrying.";
+    }
+  }
+
+  async function load(scenario) {
+    const res = await fetch("/api/sim/demo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scenario }),
+    });
+    renderStatus(await res.json());
+    await renderEvents();
+  }
+
+  $("btn-normal").addEventListener("click", () => load("normal"));
+  $("btn-collapse").addEventListener("click", () => load("collapse"));
+
+  resize();
+  requestAnimationFrame(frame);
+  poll();
+  setInterval(poll, 4000);
+})();
+</script>
+</body>
+</html>
