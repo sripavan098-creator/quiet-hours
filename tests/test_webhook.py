@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "app"
 sys.path.insert(0, str(ROOT))
+import _isolate  # noqa: E402,F401  (clears deployment env before server loads)
 
 import ring_adapter  # noqa: E402
 import server  # noqa: E402

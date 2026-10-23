@@ -82,3 +82,15 @@ tests/
 ## Licence
 
 MIT. See `LICENSE`.
+
+## Storage, readiness and the live demo
+
+- `QH_DB_PATH` sets the SQLite file for events (default `data/quiet_hours.db`). Use persistent storage in production, or the store clears on each redeploy.
+- `GET /readyz` returns `200` when the settings are present and the store answers, and `503` otherwise. `GET /healthz` is a plain liveness check.
+- The live demo data is simulated. To load it into a running server, set `RING_WEBHOOK_SECRET` in your shell (same value as the server) and run:
+
+  ```
+  python3 scripts/send_demo_to_live.py https://quiet-hours-q0or.onrender.com collapse
+  ```
+
+  Use `normal` for an ordinary day. Run one scenario per fresh server, and redeploy to clear the store before switching.

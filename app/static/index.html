@@ -87,6 +87,7 @@
   details.rules ul { margin: 10px 0 4px; padding-left: 18px; color: #b8cde0; }
   details.rules li { margin-bottom: 8px; }
 
+  .feed-note { margin: 10px 0 0; color: #c9d8e6; font-size: 0.95rem; line-height: 1.45; }
   .feed { flex: 1; min-height: 0; overflow: auto; border-top: 1px solid var(--line); padding-top: 12px; }
   .feed ol { list-style: none; margin: 0; padding: 0; }
   .feed li { display: grid; grid-template-columns: 56px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line); color: #a9c0d3; }
@@ -178,6 +179,7 @@
       </div>
 
       <div class="alerts" id="alerts"></div>
+      <p id="feed-note" class="feed-note" hidden></p>
 
       <details class="rules">
         <summary>How this was decided</summary>
@@ -416,6 +418,13 @@
       el.append(who, msg);
       box.append(el);
     }
+
+    const gap = Boolean(s.feed && s.feed.gap_warning);
+    const note = $("feed-note");
+    note.hidden = !gap;
+    note.textContent = gap
+      ? "No Ring events have arrived for a long time during the day. The quiet shown may mean the connection is broken, not that the home is quiet."
+      : "";
 
     renderRules(s);
     $("scene-summary").textContent =

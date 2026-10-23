@@ -113,6 +113,7 @@ def main():
             # ---- collapse content ----
             alerts = phone.locator("#alerts .alert-item").count()
             check("collapse shows alerts", alerts >= 1, f"count {alerts}")
+            check("feed notice hidden when the feed is working", phone.locator("#feed-note").is_hidden())
             summary = phone.inner_text("#scene-summary")
             check("screen-reader summary updated", "Home needs a check" in summary, summary[:80])
 

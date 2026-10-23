@@ -148,7 +148,8 @@ def assess(
     routine_status: dict[str, str] = {}
     for zone, check_h, label in ROUTINE_CHECKS:
         times = by_zone[zone]
-        today = [t for t in times if t.date() == now.date()]
+        # Only touches before the check hour count: the alert says "not happened by then".
+        today = [t for t in times if t.date() == now.date() and t.hour < check_h]
         usual_days = {
             t.date()
             for t in times

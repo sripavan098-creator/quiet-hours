@@ -51,6 +51,12 @@ class MorningKitchenCheck(unittest.TestCase):
         status = analysis.assess(events, ist(2026, 10, 21, 10, 30))
         self.assertNotIn("kitchen", {a["zone"] for a in status["alerts"]})
 
+    def test_use_after_check_hour_does_not_satisfy_the_check(self):
+        # Kitchen used at 11:00 only: the 10:00 check still missed.
+        events = self.history() + [("kitchen", ist(2026, 10, 21, 11, 0))]
+        status = analysis.assess(events, ist(2026, 10, 21, 11, 30))
+        self.assertIn("kitchen", {a["zone"] for a in status["alerts"]})
+
     def test_silent_before_check_hour(self):
         status = analysis.assess(self.history(), ist(2026, 10, 21, 9, 30))
         self.assertNotIn("kitchen", {a["zone"] for a in status["alerts"]})
